@@ -1,0 +1,31 @@
+{
+  "name": "bot-barber",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "tsc",
+    "dev": "nodemon src/index.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node-schedule": "^2.1.7",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@aws-sdk/client-sqs": "^3.679.0",
+    "axios": "^1.7.9",
+    "date-fns": "^4.1.0",
+    "date-fns-tz": "^3.2.0",
+    "dotenv": "^16.4.7",
+    "node-schedule": "^2.1.1",
+    "node-telegram-bot-api": "^0.66.0",
+    "redis": "^4.7.0"
+  }
+}

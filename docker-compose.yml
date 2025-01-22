@@ -1,0 +1,9 @@
+version: '2.4'
+services:
+  cron:
+    image: bot-barber
+    build:
+      context: '.'
+      dockerfile: Dockerfile
+      network: host
+    env_file: .env
