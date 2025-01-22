@@ -41,7 +41,6 @@ function isValidTime(time: string): boolean {
 // Handler para mensagens iniciais
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
-  // console.log(`Received message from ${chatId}: ${msg.text}`);
 
   // Se o usuário não estiver em nenhum estado, enviar mensagem inicial
   if (!userStates[chatId]) {
@@ -99,6 +98,7 @@ bot.on('message', async (msg) => {
     userStates[chatId].time = requestedTime;
     const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
       'Esperamos você, na Barbearia do Lucas!\n' +
+      'A tolerância de atraso é de 15 minutos.\n' +
       'Para cancelar seu agendamento, digite /cancelar';
 
     await bot.sendMessage(chatId, successMessage);
