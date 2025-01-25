@@ -32,10 +32,18 @@ interface UserData {
 
 const userStates: { [key: number]: UserData } = {};
 
+// Lista global de agendamentos
+const appointments: string[] = [];
+
 // Função para verificar se o horário está dentro do período de funcionamento (8h às 18h)
 function isValidTime(time: string): boolean {
   const [hours] = time.split(':').map(Number);
   return hours >= 8 && hours < 18;
+}
+
+// Função para verificar se o horário já está ocupado
+function isTimeTaken(time: string): boolean {
+  return appointments.includes(time);
 }
 
 // Handler para mensagens iniciais
@@ -74,6 +82,44 @@ bot.on('message', async (msg) => {
     return;
   }
 
+  // Se estiver aguardando o novo horário
+  if (userStates[chatId].state === 'awaiting_new_time') {
+    const requestedTime = msg.text?.trim();
+
+    if (isTimeTaken(requestedTime)) {
+      userStates[chatId].state = 'awaiting_new_time';
+      await bot.sendMessage(chatId, '❌ Não é possível agendar! Pois já possui agendamento para este horário. Escolha outro horário.');
+      return;
+    }
+
+    const userData = userStates[chatId];
+
+    // Confirmar agendamento
+    userStates[chatId].hasAppointment = true;
+    userStates[chatId].time = requestedTime;
+    appointments.push(requestedTime); // Adiciona o horário agendado à lista de agendamentos
+
+    const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
+      'Esperamos você, na Barbearia do Lucas!\n' +
+      'A tolerância de atraso é de 15 minutos.\n' +
+      'Para cancelar seu agendamento, digite /cancelar';
+
+    await bot.sendMessage(chatId, successMessage);
+
+    // Enviar notificação para um chatId específico
+    const adminChatId = process.env.ADMIN_CHAT_ID!;
+    const notificationMessage = `Novo agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${requestedTime}`;
+    await bot.sendMessage(adminChatId, notificationMessage);
+
+    // Manter apenas dados do agendamento
+    userStates[chatId] = {
+      state: 'has_appointment',
+      fullName: userData.fullName,
+      time: requestedTime,
+      hasAppointment: true
+    };
+  }
+
   // Se estiver aguardando o horário
   if (userStates[chatId].state === 'awaiting_time') {
     const requestedTime = msg.text?.trim();
@@ -91,11 +137,19 @@ bot.on('message', async (msg) => {
       return;
     }
 
+    if (isTimeTaken(requestedTime)) {
+      userStates[chatId].state = 'awaiting_new_time';
+      await bot.sendMessage(chatId, '❌ Não é possível agendar! Pois já possui agendamento para este horário. Escolha outro horário.');
+      return;
+    }
+
     const userData = userStates[chatId];
 
     // Confirmar agendamento
     userStates[chatId].hasAppointment = true;
     userStates[chatId].time = requestedTime;
+    appointments.push(requestedTime); // Adiciona o horário agendado à lista de agendamentos
+
     const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
       'Esperamos você, na Barbearia do Lucas!\n' +
       'A tolerância de atraso é de 15 minutos.\n' +
@@ -137,7 +191,31 @@ bot.onText(/\/cancelar/, async (msg) => {
   await bot.sendMessage(adminChatId, notificationMessage);
 
   // Limpar dados do agendamento
+  appointments.splice(appointments.indexOf(userData.time!), 1); // Remove o horário cancelado da lista de agendamentos
   delete userStates[chatId];
+});
+
+// Handler para listagem de agenda
+bot.onText(/\/agenda/, async (msg) => {
+  // const chatId = msg.chat.id;
+  // const userData = userStates[chatId];
+
+  // if (!userData?.hasAppointment) {
+  //   await bot.sendMessage(chatId, 'Você não possui nenhum agendamento para cancelar.');
+  //   return;
+  // }
+
+  // const cancelMessage = `❌ ${userData.fullName}, seu agendamento para ${userData.time} foi cancelado com sucesso.`;
+  // await bot.sendMessage(chatId, cancelMessage);
+
+  // // Notificar admin sobre o cancelamento
+  // const adminChatId = process.env.ADMIN_CHAT_ID!;
+  // const notificationMessage = `Cancelamento de agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${userData.time}`;
+  // await bot.sendMessage(adminChatId, notificationMessage);
+
+  // // Limpar dados do agendamento
+  // appointments.splice(appointments.indexOf(userData.time!), 1); // Remove o horário cancelado da lista de agendamentos
+  // delete userStates[chatId];
 });
 
 console.log('Bot da Barbearia do Lucas está rodando!');
