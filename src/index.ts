@@ -46,6 +46,35 @@ function isTimeTaken(time: string): boolean {
   return appointments.includes(time);
 }
 
+async function confirmTimeMessage(chatId: number, requestedTime: string) {
+  const userData = userStates[chatId];
+
+  // Confirmar agendamento
+  userStates[chatId].hasAppointment = true;
+  userStates[chatId].time = requestedTime;
+  appointments.push(requestedTime); // Adiciona o horário agendado à lista de agendamentos
+
+  const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
+    'Esperamos você, na Barbearia do Lucas!\n' +
+    'A tolerância de atraso é de 15 minutos.\n' +
+    'Para cancelar seu agendamento, digite /cancelar';
+
+  await bot.sendMessage(chatId, successMessage);
+
+  // Enviar notificação para um chatId específico
+  const adminChatId = process.env.ADMIN_CHAT_ID!;
+  const notificationMessage = `Novo agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${requestedTime}`;
+  await bot.sendMessage(adminChatId, notificationMessage);
+
+  // Manter apenas dados do agendamento
+  userStates[chatId] = {
+    state: 'has_appointment',
+    fullName: userData.fullName,
+    time: requestedTime,
+    hasAppointment: true
+  };
+}
+
 // Handler para mensagens iniciais
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
@@ -92,32 +121,7 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    const userData = userStates[chatId];
-
-    // Confirmar agendamento
-    userStates[chatId].hasAppointment = true;
-    userStates[chatId].time = requestedTime;
-    appointments.push(requestedTime); // Adiciona o horário agendado à lista de agendamentos
-
-    const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
-      'Esperamos você, na Barbearia do Lucas!\n' +
-      'A tolerância de atraso é de 15 minutos.\n' +
-      'Para cancelar seu agendamento, digite /cancelar';
-
-    await bot.sendMessage(chatId, successMessage);
-
-    // Enviar notificação para um chatId específico
-    const adminChatId = process.env.ADMIN_CHAT_ID!;
-    const notificationMessage = `Novo agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${requestedTime}`;
-    await bot.sendMessage(adminChatId, notificationMessage);
-
-    // Manter apenas dados do agendamento
-    userStates[chatId] = {
-      state: 'has_appointment',
-      fullName: userData.fullName,
-      time: requestedTime,
-      hasAppointment: true
-    };
+    await confirmTimeMessage(chatId, requestedTime);
   }
 
   // Se estiver aguardando o horário
@@ -143,32 +147,7 @@ bot.on('message', async (msg) => {
       return;
     }
 
-    const userData = userStates[chatId];
-
-    // Confirmar agendamento
-    userStates[chatId].hasAppointment = true;
-    userStates[chatId].time = requestedTime;
-    appointments.push(requestedTime); // Adiciona o horário agendado à lista de agendamentos
-
-    const successMessage = `✅ Ótimo, ${userData.fullName}! Seu horário foi agendado com sucesso para ${requestedTime}.\n\n` +
-      'Esperamos você, na Barbearia do Lucas!\n' +
-      'A tolerância de atraso é de 15 minutos.\n' +
-      'Para cancelar seu agendamento, digite /cancelar';
-
-    await bot.sendMessage(chatId, successMessage);
-
-    // Enviar notificação para um chatId específico
-    const adminChatId = process.env.ADMIN_CHAT_ID!;
-    const notificationMessage = `Novo agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${requestedTime}`;
-    await bot.sendMessage(adminChatId, notificationMessage);
-
-    // Manter apenas dados do agendamento
-    userStates[chatId] = {
-      state: 'has_appointment',
-      fullName: userData.fullName,
-      time: requestedTime,
-      hasAppointment: true
-    };
+    await confirmTimeMessage(chatId, requestedTime);
   }
 });
 
@@ -197,25 +176,21 @@ bot.onText(/\/cancelar/, async (msg) => {
 
 // Handler para listagem de agenda
 bot.onText(/\/agenda/, async (msg) => {
-  // const chatId = msg.chat.id;
-  // const userData = userStates[chatId];
+  const chatId = msg.chat.id;
+  const adminChatId = Number(process.env.ADMIN_CHAT_ID!);
 
-  // if (!userData?.hasAppointment) {
-  //   await bot.sendMessage(chatId, 'Você não possui nenhum agendamento para cancelar.');
-  //   return;
-  // }
+  if (chatId === adminChatId) {
+    const generateAgendaMessages = (): string => {
+      return userStates && Object.values(userStates)
+        .map(userData => {
+          return `Cliente: ${userData.fullName}\nHorário: ${userData.time}`;
+        })
+        .join('\n\n');
+    };
 
-  // const cancelMessage = `❌ ${userData.fullName}, seu agendamento para ${userData.time} foi cancelado com sucesso.`;
-  // await bot.sendMessage(chatId, cancelMessage);
-
-  // // Notificar admin sobre o cancelamento
-  // const adminChatId = process.env.ADMIN_CHAT_ID!;
-  // const notificationMessage = `Cancelamento de agendamento:\n\nCliente: ${userData.fullName}\nHorário: ${userData.time}`;
-  // await bot.sendMessage(adminChatId, notificationMessage);
-
-  // // Limpar dados do agendamento
-  // appointments.splice(appointments.indexOf(userData.time!), 1); // Remove o horário cancelado da lista de agendamentos
-  // delete userStates[chatId];
+    const agendaMessage = generateAgendaMessages();
+    await bot.sendMessage(adminChatId, `Agendamentos de hoje:\n\n${agendaMessage}`);
+  }
 });
 
 console.log('Bot da Barbearia do Lucas está rodando!');
