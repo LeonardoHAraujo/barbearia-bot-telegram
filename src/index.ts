@@ -1,5 +1,6 @@
 import * as dotenv from 'dotenv';
 import TelegramBot from 'node-telegram-bot-api';
+import * as schedule from 'node-schedule';
 
 dotenv.config();
 
@@ -30,7 +31,7 @@ interface UserData {
   hasAppointment?: boolean;
 }
 
-const userStates: { [key: number]: UserData } = {};
+let userStates: { [key: number]: UserData } = {};
 
 // Lista global de agendamentos
 const appointments: string[] = [];
@@ -44,6 +45,11 @@ function isValidTime(time: string): boolean {
 // Função para verificar se o horário já está ocupado
 function isTimeTaken(time: string): boolean {
   return appointments.includes(time);
+}
+
+// Função para resetar o estado global
+function resetState() {
+  userStates = {};
 }
 
 async function confirmTimeMessage(chatId: number, requestedTime: string) {
@@ -192,5 +198,7 @@ bot.onText(/\/agenda/, async (msg) => {
     await bot.sendMessage(adminChatId, `Agendamentos de hoje:\n\n${agendaMessage}`);
   }
 });
+
+schedule.scheduleJob('0 0 * * *', async (): Promise<void> => resetState());
 
 console.log('Bot da Barbearia do Lucas está rodando!');
